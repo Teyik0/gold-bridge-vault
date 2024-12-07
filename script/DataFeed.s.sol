@@ -2,17 +2,17 @@
 pragma solidity ^0.8.13;
 
 import {Script, console} from "forge-std/Script.sol";
-import {Counter} from "../src/Counter.sol";
+import {DataFeed} from "../src/DataFeed.sol";
 
-contract CounterScript is Script {
-    Counter public counter;
+contract DataFeedScript is Script {
+    DataFeed public dataFeed;
 
     function setUp() public {}
 
     function run() public {
         vm.startBroadcast();
 
-        counter = new Counter();
+        dataFeed = new DataFeed();
 
         vm.stopBroadcast();
     }

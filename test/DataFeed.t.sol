@@ -3,22 +3,23 @@ pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
 import {DataFeed} from "../src/DataFeed.sol";
+import {MockV3Aggregator} from "@chainlink/contracts/v0.8/tests/MockV3Aggregator.sol";
 
-contract CounterTest is Test {
-    Counter public counter;
+contract DataFeedTest is Test {
+    DataFeed public dataFeed;
+    MockV3Aggregator public oracle;
 
     function setUp() public {
-        counter = new Counter();
-        counter.setNumber(0);
+        oracle = new MockV3Aggregator(
+            18, //decimals
+            1   //initial data
+        );
+        dataFeed = new DataFeed();
     }
 
-    function test_Increment() public {
-        counter.increment();
-        assertEq(counter.number(), 1);
-    }
-
-    function testFuzz_SetNumber(uint256 x) public {
-        counter.setNumber(x);
-        assertEq(counter.number(), x);
+    function test_get_ETH_USD() public {
+        int price = dataFeed.getLatestPrice();
+        console.log(price);
+        assertEq(price, 1);
     }
 }
