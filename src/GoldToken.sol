@@ -19,13 +19,6 @@ contract GoldToken is ERC20, Ownable, ERC20Permit {
     event Mint(address indexed user, uint256 amount, uint256 etherSpent);
     event Burn(address indexed user, uint256 amount, uint256 etherRefunded);
 
-    /**
-     * Network: Sepolia
-     * Aggregator: ETH/USD
-     * Address: 0x694AA1769357215DE4FAC081bf1f309aDC325306
-     * Aggregator: XAU/USD
-     * Address: 0xC5981F461d74c46eB4b0CF3f4Ec79f025573B0Ea
-     */
     constructor(
         address initialOwner,
         address _eth_usd_agg,
@@ -43,15 +36,16 @@ contract GoldToken is ERC20, Ownable, ERC20Permit {
             revert InvalidAmount(
                 msg.sender,
                 msg.value,
-                "Value should be positive"
+                "Value should be strictly positive"
             );
         uint256 etherPrice = getETHPrice();
         uint256 goldOuncePrice = getXAUPrice();
-        uint256 feeValue = (msg.value * FEE_PERCENT) / 100;
-        uint256 goldAmount = ((msg.value - feeValue) * etherPrice) /
-            goldOuncePrice;
-        _mint(msg.sender, goldAmount);
-        emit Mint(msg.sender, goldAmount, msg.value);
+
+        uint256 goldOunceAmount = (msg.value * goldOuncePrice) / etherPrice;
+        uint256 fee = (goldOunceAmount * FEE_PERCENT) / 100;
+
+        _mint(msg.sender, goldOunceAmount - fee);
+        emit Mint(msg.sender, goldOunceAmount, msg.value);
     }
 
     /**
@@ -61,26 +55,20 @@ contract GoldToken is ERC20, Ownable, ERC20Permit {
     function burn(uint256 amount) external {
         if (balanceOf(msg.sender) <= amount)
             revert InvalidAmount(msg.sender, amount, "Insufficient balance");
-        // Calculate fee and final refundable amount
-        uint256 fee = (amount * FEE_PERCENT) / 100;
-        uint256 refundableAmount = amount - fee;
-
-        // Get the latest gold price
-        uint256 goldPricePerGramUSD = getXAUPrice();
-
-        // Calculate Ether equivalent for the refundable amount
+        uint256 goldOuncePrice = getXAUPrice();
         uint256 etherPrice = getETHPrice();
-        uint256 etherRefund = (refundableAmount * goldPricePerGramUSD * 1e18) /
-            etherPrice;
 
-        // Burn the tokens
+        uint256 userGoldAmountToRefund = (amount * goldOuncePrice) / 1e18;
+        uint256 etherToRefund = (userGoldAmountToRefund * 1e18) / etherPrice;
+        uint256 fee = (etherToRefund * FEE_PERCENT) / 100;
+
         _burn(msg.sender, amount);
 
         // Refund Ether
-        (bool success, ) = msg.sender.call{value: etherRefund}("");
+        (bool success, ) = msg.sender.call{value: etherToRefund - fee}("");
         require(success, "Ether refund failed");
 
-        emit Burn(msg.sender, amount, etherRefund);
+        emit Burn(msg.sender, amount, etherToRefund);
     }
 
     /**
