@@ -85,4 +85,22 @@ contract GoldTokenTest is Test {
         assertEq(goldToken.balanceOf(USER1), 0.45 ether);
         vm.stopPrank();
     }
+
+    function testBurn1OounceXauFailedNotEnoughtFound() public {
+        // user want to burn 1.5 ounce of gold, but he can't
+        vm.startPrank(USER1);
+        uint256 etherSpent = (ETH_USD_VAL * 1e18) / XAU_USD_VAL;
+        goldToken.mint{value: etherSpent}();
+
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "InvalidAmount(address,uint256,string)",
+                USER1,
+                1.5 ether,
+                "Insufficient balance"
+            )
+        );
+        goldToken.burn(1.5 ether);
+        vm.stopPrank();
+    }
 }
