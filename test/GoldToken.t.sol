@@ -5,6 +5,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {GoldToken} from "../src/GoldToken.sol";
 import {MockV3Aggregator} from "@chainlink/contracts/v0.8/tests/MockV3Aggregator.sol";
 
+// forge coverage --report debug > report.log
 contract GoldTokenTest is Test {
     GoldToken public goldToken;
     MockV3Aggregator public mock_eth_usd;
@@ -35,16 +36,41 @@ contract GoldTokenTest is Test {
         vm.deal(USER2, 1 ether);
     }
 
-    function testGetETHPrice() public view {
+    function test_getETHPrice() public view {
         uint256 price = goldToken.getETHPrice();
         assertEq(price, ETH_USD_VAL);
     }
-    function testGetXAUPrice() public view {
+    function test_getETHPrice_failed() public {
+        mock_eth_usd.updateRoundData(0, 0, block.timestamp, block.timestamp);
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "InvalidAmount(address,uint256,string)",
+                address(this),
+                0,
+                "Invalid price"
+            )
+        );
+        goldToken.getETHPrice();
+    }
+
+    function test_getXAUPrice() public view {
         uint256 price = goldToken.getXAUPrice();
         assertEq(price, XAU_USD_VAL);
     }
+    function test_getXAUPrice_failed() public {
+        mock_xau_usd.updateRoundData(0, 0, block.timestamp, block.timestamp);
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "InvalidAmount(address,uint256,string)",
+                address(this),
+                0,
+                "Invalid price"
+            )
+        );
+        goldToken.getXAUPrice();
+    }
 
-    function testMint1OunceXau() public {
+    function test_mint_1OounceXau() public {
         // user want to buy 1 ounce of gold and xau price mocked to 2500 USD
         vm.startPrank(USER1);
         uint256 etherSpent = (ETH_USD_VAL * 1e18) / XAU_USD_VAL;
@@ -53,7 +79,7 @@ contract GoldTokenTest is Test {
         vm.stopPrank();
     }
 
-    function testMintFailedNotEnoughFund() public {
+    function test_mint_failed_notEnoughFund() public {
         // user want to buy 1 ounce of gold
         vm.startPrank(USER2);
         uint256 etherSpent = (ETH_USD_VAL * 1e18) / XAU_USD_VAL;
@@ -62,7 +88,7 @@ contract GoldTokenTest is Test {
         vm.stopPrank();
     }
 
-    function testMintFailedZeroValue() public {
+    function test_mint_failed_zeroValue() public {
         vm.startPrank(USER1);
         vm.expectRevert(
             abi.encodeWithSignature(
@@ -76,7 +102,7 @@ contract GoldTokenTest is Test {
         vm.stopPrank();
     }
 
-    function testBurn1OounceXau() public {
+    function test_burn_1OounceXau() public {
         // user want to burn 0.5 ounce of gold, user rest is 0.45 ounce
         vm.startPrank(USER1);
         uint256 etherSpent = (ETH_USD_VAL * 1e18) / XAU_USD_VAL;
@@ -86,7 +112,7 @@ contract GoldTokenTest is Test {
         vm.stopPrank();
     }
 
-    function testBurn1OounceXauFailedNotEnoughtFound() public {
+    function test_burn_1OunceXau_failed_notEnoughFund() public {
         // user want to burn 1.5 ounce of gold, but he can't
         vm.startPrank(USER1);
         uint256 etherSpent = (ETH_USD_VAL * 1e18) / XAU_USD_VAL;
@@ -102,5 +128,35 @@ contract GoldTokenTest is Test {
         );
         goldToken.burn(1.5 ether);
         vm.stopPrank();
+    }
+
+    function test_burn_1OounceXau_failed_etherRefundNotEnoughtBalance() public {
+        // user want to burn 0.5 ounce of gold, user rest is 0.45 ounce
+        vm.startPrank(USER1);
+        uint256 etherSpent = (ETH_USD_VAL * 1e18) / XAU_USD_VAL;
+        goldToken.mint{value: etherSpent}();
+
+        vm.startPrank(USER1);
+        mock_xau_usd.updateRoundData(
+            0,
+            80000 ether,
+            block.timestamp,
+            block.timestamp
+        ); // Gold price has increased a lot
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "refundFailed(address,string)",
+                USER1,
+                "Contract has insufficient balance"
+            )
+        );
+        goldToken.burn(0.5 ether);
+        vm.stopPrank();
+    }
+
+    function test_receive() public {
+        vm.expectRevert("Use mint function to send Ether");
+        (bool success, ) = address(goldToken).call{value: 1 ether}("");
+        require(success, "Use mint function to send Ether");
     }
 }

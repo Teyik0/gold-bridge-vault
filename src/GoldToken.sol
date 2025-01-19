@@ -5,12 +5,14 @@ pragma solidity ^0.8.22;
 import {console} from "forge-std/Test.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/v0.8/interfaces/AggregatorV3Interface.sol";
 
 error InvalidAmount(address caller, uint256 amount, string message);
+error refundFailed(address caller, string message);
 
-contract GoldToken is ERC20, Ownable, ERC20Permit {
+contract GoldToken is ERC20, Ownable, ERC20Permit, ReentrancyGuard {
     AggregatorV3Interface internal immutable ETH_USD_PRICE_FEED;
     AggregatorV3Interface internal immutable GOLD_USD_PRICE_FEED;
     // Fees for minting and burning
@@ -62,11 +64,14 @@ contract GoldToken is ERC20, Ownable, ERC20Permit {
         uint256 etherToRefund = (userGoldAmountToRefund * 1e18) / etherPrice;
         uint256 fee = (etherToRefund * FEE_PERCENT) / 100;
 
-        _burn(msg.sender, amount);
-
-        // Refund Ether
         (bool success, ) = msg.sender.call{value: etherToRefund - fee}("");
-        require(success, "Ether refund failed");
+        if (!success)
+            revert refundFailed(
+                msg.sender,
+                "Contract has insufficient balance"
+            );
+
+        _burn(msg.sender, amount);
 
         emit Burn(msg.sender, amount, etherToRefund);
     }
@@ -76,7 +81,8 @@ contract GoldToken is ERC20, Ownable, ERC20Permit {
      */
     function getXAUPrice() public view returns (uint256) {
         (, int256 price, , , ) = GOLD_USD_PRICE_FEED.latestRoundData();
-        require(price > 0, "Invalid price");
+        if (price <= 0)
+            revert InvalidAmount(msg.sender, uint256(price), "Invalid price");
         return uint256(price);
     }
 
@@ -85,7 +91,8 @@ contract GoldToken is ERC20, Ownable, ERC20Permit {
      */
     function getETHPrice() public view returns (uint256) {
         (, int256 price, , , ) = ETH_USD_PRICE_FEED.latestRoundData();
-        require(price > 0, "Invalid price");
+        if (price <= 0)
+            revert InvalidAmount(msg.sender, uint256(price), "Invalid price");
         return uint256(price);
     }
 
@@ -93,6 +100,6 @@ contract GoldToken is ERC20, Ownable, ERC20Permit {
      * @dev Fallback function to reject direct Ether transfers.
      */
     receive() external payable {
-        revert("Use the mint function to send Ether");
+        revert("Use mint function to send Ether");
     }
 }
