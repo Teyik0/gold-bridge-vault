@@ -1,4 +1,5 @@
 @openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
 @chainlink/contracts/=lib/foundry-chainlink-toolkit/lib/chainlink-brownie-contracts/contracts/src/
-@chainlink/local/=lib/chainlink-local/
+@chainlink/ccip/=lib/chainlink-local/lib/ccip/contracts/src/v0.8/
+@chainlink/local/=lib/chainlink-local/src/
 forge-std/=lib/forge-std/src/

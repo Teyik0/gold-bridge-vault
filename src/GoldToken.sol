@@ -6,13 +6,12 @@ import {console} from "forge-std/Test.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/v0.8/interfaces/AggregatorV3Interface.sol";
 
-error InvalidAmount(address caller, uint256 amount, string message);
-error refundFailed(address caller, string message);
+contract GoldToken is ERC20, ERC20Permit, ReentrancyGuard {
+    error InvalidAmount(address caller, uint256 amount, string message);
+    error refundFailed(address caller, string message);
 
-contract GoldToken is ERC20, Ownable, ERC20Permit, ReentrancyGuard {
     AggregatorV3Interface internal immutable ETH_USD_PRICE_FEED;
     AggregatorV3Interface internal immutable GOLD_USD_PRICE_FEED;
     // Fees for minting and burning
@@ -22,10 +21,9 @@ contract GoldToken is ERC20, Ownable, ERC20Permit, ReentrancyGuard {
     event Burn(address indexed user, uint256 amount, uint256 etherRefunded);
 
     constructor(
-        address initialOwner,
         address _eth_usd_agg,
         address _gold_usd_agg
-    ) ERC20("GOLD", "GLD") Ownable(initialOwner) ERC20Permit("GOLD") {
+    ) ERC20("GOLD", "GLD") ERC20Permit("GOLD") {
         ETH_USD_PRICE_FEED = AggregatorV3Interface(_eth_usd_agg);
         GOLD_USD_PRICE_FEED = AggregatorV3Interface(_gold_usd_agg);
     }
@@ -54,7 +52,7 @@ contract GoldToken is ERC20, Ownable, ERC20Permit, ReentrancyGuard {
      * @dev Burns tokens and refunds Ether equivalent minus fees.
      * @param amount The amount of GOLD tokens to burn.
      */
-    function burn(uint256 amount) external {
+    function burn(uint256 amount) external nonReentrant {
         if (balanceOf(msg.sender) <= amount)
             revert InvalidAmount(msg.sender, amount, "Insufficient balance");
         uint256 goldOuncePrice = getXAUPrice();

@@ -2,6 +2,7 @@
   "extends": "solhint:default",
   "rules": {
     "func-name-mixedcase": false,
-    "no-console": false
+    "no-console": false,
+    "max-line-length": false
   }
 }

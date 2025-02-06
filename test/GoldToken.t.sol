@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.22;
 
 import {Test, console} from "forge-std/Test.sol";
 import {GoldToken} from "../src/GoldToken.sol";
@@ -26,11 +26,7 @@ contract GoldTokenTest is Test {
         mock_eth_usd = new MockV3Aggregator(DECIMALS, int256(ETH_USD_VAL));
         mock_xau_usd = new MockV3Aggregator(DECIMALS, int256(XAU_USD_VAL));
 
-        goldToken = new GoldToken(
-            address(this),
-            address(mock_eth_usd),
-            address(mock_xau_usd)
-        );
+        goldToken = new GoldToken(address(mock_eth_usd), address(mock_xau_usd));
 
         vm.deal(USER1, 2 ether);
         vm.deal(USER2, 1 ether);
@@ -40,6 +36,7 @@ contract GoldTokenTest is Test {
         uint256 price = goldToken.getETHPrice();
         assertEq(price, ETH_USD_VAL);
     }
+
     function test_getETHPrice_failed() public {
         mock_eth_usd.updateRoundData(0, 0, block.timestamp, block.timestamp);
         vm.expectRevert(
@@ -57,6 +54,7 @@ contract GoldTokenTest is Test {
         uint256 price = goldToken.getXAUPrice();
         assertEq(price, XAU_USD_VAL);
     }
+
     function test_getXAUPrice_failed() public {
         mock_xau_usd.updateRoundData(0, 0, block.timestamp, block.timestamp);
         vm.expectRevert(
