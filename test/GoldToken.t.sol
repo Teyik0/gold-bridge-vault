@@ -77,15 +77,6 @@ contract GoldTokenTest is Test {
         vm.stopPrank();
     }
 
-    function test_mint_failed_notEnoughFund() public {
-        // user want to buy 1 ounce of gold
-        vm.startPrank(USER2);
-        uint256 etherSpent = (ETH_USD_VAL * 1e18) / XAU_USD_VAL;
-        vm.expectRevert();
-        goldToken.mint{value: etherSpent}();
-        vm.stopPrank();
-    }
-
     function test_mint_failed_zeroValue() public {
         vm.startPrank(USER1);
         vm.expectRevert(

@@ -48,10 +48,11 @@ contract GoldTokenCCIPTest is Test {
         router = sourceRouter;
         ccipBnMToken = ccipBnM;
 
-        mock_eth_usd = new MockV3Aggregator(DECIMALS, int256(ETH_USD_VAL));
-        mock_xau_usd = new MockV3Aggregator(DECIMALS, int256(XAU_USD_VAL));
-
-        goldTokenCCIP = new GoldTokenCCIP(address(sourceRouter), chainSelector);
+        goldTokenCCIP = new GoldTokenCCIP(
+            address(sourceRouter),
+            chainSelector,
+            address(goldToken)
+        );
 
         alice = makeAddr("alice");
         bob = makeAddr("bob");
@@ -66,7 +67,6 @@ contract GoldTokenCCIPTest is Test {
         goldToken.mint{value: etherSpent}();
 
         goldToken.approve(address(goldTokenCCIP), goldToken.balanceOf(alice));
-
         goldTokenCCIP.bridgeToBNBChain(alice, goldToken.balanceOf(alice));
 
         uint256 balanceOfAliceAfter = ccipBnMToken.balanceOf(alice);
@@ -78,18 +78,14 @@ contract GoldTokenCCIPTest is Test {
         vm.startPrank(alice);
 
         goldToken.approve(address(goldTokenCCIP), 1 ether);
-
-        // https://book.getfoundry.sh/cheatcodes/expect-revert
-        // vm.expectRevert(
-        //     abi.encodeWithSelector(
-        //         GoldTokenCCIP.NotEnoughBalance.selector,
-        //         goldTokenCCIP.balanceOf(alice),
-        //         goldTokenCCIP.balanceOf(alice) + 1
-        //     )
-        // );
-        try goldTokenCCIP.bridgeToBNBChain(alice, 1 ether) {
-            revert("error if call works");
-        } catch {}
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "NotEnoughBalance(uint256,uint256)",
+                0,
+                1 ether
+            )
+        );
+        goldTokenCCIP.bridgeToBNBChain(alice, 1 ether);
         vm.stopPrank();
     }
 
@@ -97,16 +93,11 @@ contract GoldTokenCCIPTest is Test {
         vm.startPrank(alice);
         uint256 etherSpent = (ETH_USD_VAL * 1e18) / XAU_USD_VAL;
         goldToken.mint{value: etherSpent}();
-
         goldToken.approve(address(goldTokenCCIP), goldToken.balanceOf(alice));
 
         // https://book.getfoundry.sh/cheatcodes/expect-revert
-        // vm.expectRevert(
-        //     abi.encodeWithSelector(
-        //         GoldTokenCCIP.InvalidReceiverAddress.selector,
-        //         "Receiver address cannot be 0"
-        //     )
-        // );
+        // vm.expectRevert();
+        // goldTokenCCIP.bridgeToBNBChain(address(0), goldToken.balanceOf(alice));
         try
             goldTokenCCIP.bridgeToBNBChain(
                 address(0),

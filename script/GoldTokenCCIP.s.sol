@@ -42,7 +42,8 @@ contract GoldTokenCCIPScript is Script {
         goldToken = new GoldToken(ethUsdFeed, xauUsdFeed);
         goldTokenCCIP = new GoldTokenCCIP(
             routerAddress,
-            DESTINATION_CHAIN_SELECTOR
+            DESTINATION_CHAIN_SELECTOR,
+            address(goldToken)
         );
 
         vm.stopBroadcast();
