@@ -166,6 +166,8 @@ contract GoldTokenLotteryTest is Test {
         goldTokenLottery.startLottery(goldToken.collectedFees(), 0.0001 ether);
 
         vm.deal(alice, 0.0001 ether);
+        vm.deal(address(goldTokenLottery), 1 ether);
+
         vm.prank(alice);
         goldTokenLottery.enterLottery{value: 0.0001 ether}();
 

@@ -3,11 +3,13 @@ pragma solidity ^0.8.19;
 
 import {Script, console} from "forge-std/Script.sol";
 import {GoldTokenCCIP} from "../src/GoldTokenCCIP.sol";
+import {GoldTokenLottery} from "../src/GoldTokenLottery.sol";
 import {GoldToken} from "../src/GoldToken.sol";
 
 contract GoldTokenCCIPScript is Script {
     GoldTokenCCIP public goldTokenCCIP;
     GoldToken public goldToken;
+    GoldTokenLottery public goldTokenLottery;
 
     uint256 public chainId = block.chainid;
 
@@ -40,6 +42,10 @@ contract GoldTokenCCIPScript is Script {
     function run() public {
         vm.startBroadcast();
         goldToken = new GoldToken(ethUsdFeed, xauUsdFeed);
+        goldTokenLottery = new GoldTokenLottery(
+            address(goldToken),
+            wrapperAddress
+        );
         goldTokenCCIP = new GoldTokenCCIP(
             routerAddress,
             DESTINATION_CHAIN_SELECTOR,
