@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.19;
 
 import {Test, console} from "forge-std/Test.sol";
 import {GoldToken} from "../src/GoldToken.sol";
-import {MockV3Aggregator} from "@chainlink/contracts/v0.8/tests/MockV3Aggregator.sol";
+import {MockV3Aggregator} from "@chainlink/contracts/src/v0.8/tests/MockV3Aggregator.sol";
 
 // forge coverage --report debug > report.log
 contract GoldTokenTest is Test {

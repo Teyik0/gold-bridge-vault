@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Compatible with OpenZeppelin Contracts ^5.0.0
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.19;
 
-import {console} from "forge-std/Test.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {AggregatorV3Interface} from "@chainlink/contracts/v0.8/interfaces/AggregatorV3Interface.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
-contract GoldToken is ERC20, ERC20Permit, ReentrancyGuard {
+contract GoldToken is ERC20, ReentrancyGuard {
     error InvalidAmount(address caller, uint256 amount, string message);
     error refundFailed(address caller, string message);
 
@@ -16,6 +14,7 @@ contract GoldToken is ERC20, ERC20Permit, ReentrancyGuard {
     AggregatorV3Interface internal immutable GOLD_USD_PRICE_FEED;
     // Fees for minting and burning
     uint256 public constant FEE_PERCENT = 5;
+    uint256 public collectedFees = 0;
 
     event Mint(address indexed user, uint256 amount, uint256 etherSpent);
     event Burn(address indexed user, uint256 amount, uint256 etherRefunded);
@@ -23,7 +22,7 @@ contract GoldToken is ERC20, ERC20Permit, ReentrancyGuard {
     constructor(
         address _eth_usd_agg,
         address _gold_usd_agg
-    ) ERC20("GOLD", "GLD") ERC20Permit("GOLD") {
+    ) ERC20("GOLD", "GLD") {
         ETH_USD_PRICE_FEED = AggregatorV3Interface(_eth_usd_agg);
         GOLD_USD_PRICE_FEED = AggregatorV3Interface(_gold_usd_agg);
     }
@@ -43,6 +42,7 @@ contract GoldToken is ERC20, ERC20Permit, ReentrancyGuard {
 
         uint256 goldOunceAmount = (msg.value * goldOuncePrice) / etherPrice;
         uint256 fee = (goldOunceAmount * FEE_PERCENT) / 100;
+        collectedFees += fee;
 
         _mint(msg.sender, goldOunceAmount - fee);
         emit Mint(msg.sender, goldOunceAmount, msg.value);
@@ -69,6 +69,7 @@ contract GoldToken is ERC20, ERC20Permit, ReentrancyGuard {
                 "Contract has insufficient balance"
             );
 
+        collectedFees += fee;
         _burn(msg.sender, amount);
 
         emit Burn(msg.sender, amount, etherToRefund);

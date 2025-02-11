@@ -1,17 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Compatible with OpenZeppelin Contracts ^5.0.0
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.19;
 
-import {console} from "forge-std/Test.sol";
-import {GoldToken} from "./GoldToken.sol";
+import {GoldTokenLottery} from "./GoldTokenLottery.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {IRouterClient} from "@chainlink/ccip/ccip/interfaces/IRouterClient.sol";
-import {OwnerIsCreator} from "@chainlink/ccip/shared/access/OwnerIsCreator.sol";
-import {Client} from "@chainlink/ccip/ccip/libraries/Client.sol";
+import {IRouterClient} from "@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/IRouterClient.sol";
+import {Client} from "@chainlink/contracts-ccip/src/v0.8/ccip/libraries/Client.sol";
 
-contract GoldTokenCCIP is GoldToken, OwnerIsCreator {
+contract GoldTokenCCIP {
     error NotEnoughBalance(uint256 currentBalance, uint256 neededAmount);
     error InvalidReceiverAddress(string message);
 
@@ -34,12 +32,7 @@ contract GoldTokenCCIP is GoldToken, OwnerIsCreator {
      * @notice Constructor initializes the contract with the router address.
      * @param _router The address of the router contract.
      */
-    constructor(
-        address _eth_usd_agg,
-        address _gold_usd_agg,
-        address _router,
-        uint64 _destinationChainSelector
-    ) GoldToken(_eth_usd_agg, _gold_usd_agg) {
+    constructor(address _router, uint64 _destinationChainSelector) {
         s_router = IRouterClient(_router);
         DESTINATION_CHAIN_SELECTORR = _destinationChainSelector;
     }

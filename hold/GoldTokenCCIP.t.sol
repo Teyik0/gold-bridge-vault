@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.19;
 
 import {Test, console} from "forge-std/Test.sol";
 import {GoldTokenCCIP} from "../src/GoldTokenCCIP.sol";
-import {MockV3Aggregator} from "@chainlink/contracts/v0.8/tests/MockV3Aggregator.sol";
-import {CCIPLocalSimulator, IRouterClient, BurnMintERC677Helper} from "@chainlink/local/ccip/CCIPLocalSimulator.sol";
-import {Client} from "@chainlink/ccip/ccip/libraries/Client.sol";
+import {GoldToken} from "../src/GoldToken.sol";
+import {MockV3Aggregator} from "@chainlink/contracts/src/v0.8/tests/MockV3Aggregator.sol";
+import {CCIPLocalSimulator, IRouterClient, BurnMintERC677Helper} from "@chainlink/local/src/ccip/CCIPLocalSimulator.sol";
+import {Client} from "@chainlink/contracts-ccip/src/v0.8/ccip/libraries/Client.sol";
 
 contract GoldTokenCCIPTest is Test {
     GoldTokenCCIP public goldTokenCCIP;
+    GoldToken public goldToken;
 
     MockV3Aggregator public mock_eth_usd;
     MockV3Aggregator public mock_xau_usd;
 
-    uint256 public constant FEE_PERCENT = 5;
     uint8 public constant DECIMALS = 18;
-
     // initial mocked value -> 1 eth = 4000 USD
     uint256 public constant ETH_USD_VAL = 4000 ether;
     // initial mocked value -> 1 ounce of gold = 2500 USD
@@ -29,6 +29,10 @@ contract GoldTokenCCIPTest is Test {
     BurnMintERC677Helper public ccipBnMToken;
 
     function setUp() public {
+        mock_eth_usd = new MockV3Aggregator(DECIMALS, int256(ETH_USD_VAL));
+        mock_xau_usd = new MockV3Aggregator(DECIMALS, int256(XAU_USD_VAL));
+        goldToken = new GoldToken(address(mock_eth_usd), address(mock_xau_usd));
+
         ccipLocalSimulator = new CCIPLocalSimulator();
         (
             uint64 chainSelector,
@@ -39,6 +43,7 @@ contract GoldTokenCCIPTest is Test {
             BurnMintERC677Helper ccipBnM,
 
         ) = ccipLocalSimulator.configuration();
+
         destinationChainSelector = chainSelector;
         router = sourceRouter;
         ccipBnMToken = ccipBnM;
@@ -46,12 +51,7 @@ contract GoldTokenCCIPTest is Test {
         mock_eth_usd = new MockV3Aggregator(DECIMALS, int256(ETH_USD_VAL));
         mock_xau_usd = new MockV3Aggregator(DECIMALS, int256(XAU_USD_VAL));
 
-        goldTokenCCIP = new GoldTokenCCIP(
-            address(mock_eth_usd),
-            address(mock_xau_usd),
-            address(sourceRouter),
-            chainSelector
-        );
+        goldTokenCCIP = new GoldTokenCCIP(address(sourceRouter), chainSelector);
 
         alice = makeAddr("alice");
         bob = makeAddr("bob");
@@ -63,14 +63,11 @@ contract GoldTokenCCIPTest is Test {
     function test_bridgeToBNBChain() external {
         vm.startPrank(alice);
         uint256 etherSpent = (ETH_USD_VAL * 1e18) / XAU_USD_VAL;
-        goldTokenCCIP.mint{value: etherSpent}();
+        goldToken.mint{value: etherSpent}();
 
-        goldTokenCCIP.approve(
-            address(goldTokenCCIP),
-            goldTokenCCIP.balanceOf(alice)
-        );
+        goldToken.approve(address(goldTokenCCIP), goldToken.balanceOf(alice));
 
-        goldTokenCCIP.bridgeToBNBChain(alice, goldTokenCCIP.balanceOf(alice));
+        goldTokenCCIP.bridgeToBNBChain(alice, goldToken.balanceOf(alice));
 
         uint256 balanceOfAliceAfter = ccipBnMToken.balanceOf(alice);
         assertEq(balanceOfAliceAfter, 0);
@@ -80,7 +77,7 @@ contract GoldTokenCCIPTest is Test {
     function test_bridge_failed_notEnoughBalance() external {
         vm.startPrank(alice);
 
-        goldTokenCCIP.approve(address(goldTokenCCIP), 1 ether);
+        goldToken.approve(address(goldTokenCCIP), 1 ether);
 
         // https://book.getfoundry.sh/cheatcodes/expect-revert
         // vm.expectRevert(
@@ -99,12 +96,9 @@ contract GoldTokenCCIPTest is Test {
     function test_bridgeToBNBChain_failed_invalidReceiverAddress() external {
         vm.startPrank(alice);
         uint256 etherSpent = (ETH_USD_VAL * 1e18) / XAU_USD_VAL;
-        goldTokenCCIP.mint{value: etherSpent}();
+        goldToken.mint{value: etherSpent}();
 
-        goldTokenCCIP.approve(
-            address(goldTokenCCIP),
-            goldTokenCCIP.balanceOf(alice)
-        );
+        goldToken.approve(address(goldTokenCCIP), goldToken.balanceOf(alice));
 
         // https://book.getfoundry.sh/cheatcodes/expect-revert
         // vm.expectRevert(
@@ -116,7 +110,7 @@ contract GoldTokenCCIPTest is Test {
         try
             goldTokenCCIP.bridgeToBNBChain(
                 address(0),
-                goldTokenCCIP.balanceOf(alice)
+                goldToken.balanceOf(alice)
             )
         {
             revert("error if call works");

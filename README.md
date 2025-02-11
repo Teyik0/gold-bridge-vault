@@ -16,13 +16,14 @@ Test the contract
 ```bash
 forge install
 forge test -vv
-forge coverage
-forge coverage --report debug > report.log
+forge coverage --ir-minimum
+forge coverage --report debug > report.log --ir-minimum
 ```
 
 Deploy the contract on the Ethereum network
 
 ```bash
+source .env
 forge script --chain sepolia script/GoldTokenCCIP.s.sol:GoldTokenCCIPScript --rpc-url $RPC_URL -vvvv --broadcast
 ```
 
