@@ -24,7 +24,7 @@ Deploy the contract on the Ethereum network
 
 ```bash
 source .env
-forge script --chain sepolia script/GoldTokenCCIP.s.sol:GoldTokenCCIPScript --rpc-url $RPC_URL -vvvv --broadcast
+forge script script/GoldTokenCCIP.s.sol:GoldTokenCCIPScript --rpc-url $RPC_URL --sender $PUBLIC_WALLET_ADDRESS --private-key $PRIVATE_KEY -vvvv --broadcast
 ```
 
 You can delete --broadcast if you just want to see if the deployment script is correct

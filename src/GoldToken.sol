@@ -6,8 +6,9 @@ import {console} from "forge-std/Test.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {ConfirmedOwner} from "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
 
-contract GoldToken is ERC20, ReentrancyGuard {
+contract GoldToken is ConfirmedOwner, ERC20, ReentrancyGuard {
     error InvalidAmount(address caller, uint256 amount, string message);
     error refundFailed(address caller, string message);
 
@@ -23,7 +24,7 @@ contract GoldToken is ERC20, ReentrancyGuard {
     constructor(
         address _eth_usd_agg,
         address _gold_usd_agg
-    ) ERC20("GOLD", "GLD") {
+    ) ERC20("GOLD", "GLD") ConfirmedOwner(msg.sender) {
         ETH_USD_PRICE_FEED = AggregatorV3Interface(_eth_usd_agg);
         GOLD_USD_PRICE_FEED = AggregatorV3Interface(_gold_usd_agg);
     }
@@ -94,6 +95,16 @@ contract GoldToken is ERC20, ReentrancyGuard {
         if (price <= 0)
             revert InvalidAmount(msg.sender, uint256(price), "Invalid price");
         return uint256(price);
+    }
+
+    /**
+     * @notice Allows the owner to withdraw any native tokens from the contract.
+     * @param amount The amount of native tokens to withdraw.
+     */
+    function withdraw(uint256 amount) external onlyOwner {
+        require(amount <= collectedFees, "Insufficient balance");
+        (bool success, ) = payable(owner()).call{value: amount}("");
+        require(success, "Withdraw failed");
     }
 
     /**

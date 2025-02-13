@@ -148,4 +148,71 @@ contract GoldTokenTest is Test {
         (bool success, ) = address(goldToken).call{value: 1 ether}("");
         require(success, "Use mint function to send Ether");
     }
+
+    function test_withdraw() public {
+        vm.deal(USER1, 1 ether);
+        vm.prank(USER1);
+        goldToken.mint{value: 1 ether}();
+
+        vm.deal(USER2, 2 ether);
+        vm.prank(USER2);
+        goldToken.mint{value: 1 ether}();
+
+        goldToken.withdraw(goldToken.collectedFees());
+        vm.stopPrank();
+    }
+
+    function test_withdraw_failed() public {
+        vm.expectRevert("Insufficient balance");
+        goldToken.withdraw(1 ether);
+    }
+
+    fallback() external payable {
+        // Necessary to make work witdraw
+    }
+}
+
+contract WithdrawFailed is Test {
+    GoldToken public goldToken;
+    MockV3Aggregator public mock_eth_usd;
+    MockV3Aggregator public mock_xau_usd;
+
+    uint256 public constant FEE_PERCENT = 5;
+    uint8 public constant DECIMALS = 18;
+
+    // initial mocked value -> 1 eth = 4000 USD
+    uint256 public constant ETH_USD_VAL = 4000 ether;
+    // initial mocked value -> 1 ounce of gold = 2500 USD
+    uint256 public constant XAU_USD_VAL = 2500 ether;
+
+    address public constant USER1 = address(0x1);
+    address public constant USER2 = address(0x2);
+
+    function setUp() public {
+        mock_eth_usd = new MockV3Aggregator(DECIMALS, int256(ETH_USD_VAL));
+        mock_xau_usd = new MockV3Aggregator(DECIMALS, int256(XAU_USD_VAL));
+
+        goldToken = new GoldToken(address(mock_eth_usd), address(mock_xau_usd));
+
+        vm.deal(USER1, 2 ether);
+        vm.deal(USER2, 1 ether);
+    }
+
+    function test_withdraw_fails() public {
+        vm.deal(USER1, 1 ether);
+        vm.prank(USER1);
+        goldToken.mint{value: 1 ether}();
+
+        vm.deal(USER2, 2 ether);
+        vm.prank(USER2);
+        goldToken.mint{value: 1 ether}();
+
+        try goldToken.withdraw(goldToken.collectedFees()) {
+            revert("Withdraw should fail");
+        } catch Error(string memory reason) {
+            assertEq(reason, "Withdraw failed");
+        }
+
+        vm.stopPrank();
+    }
 }

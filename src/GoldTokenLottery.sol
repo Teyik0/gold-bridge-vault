@@ -52,7 +52,7 @@ contract GoldTokenLottery is ConfirmedOwner, VRFV2PlusWrapperConsumerBase {
     constructor(
         address _goldTokenAddress,
         address _wrapperAddress
-    ) ConfirmedOwner(msg.sender) VRFV2PlusWrapperConsumerBase(_wrapperAddress) {
+    ) VRFV2PlusWrapperConsumerBase(_wrapperAddress) ConfirmedOwner(msg.sender) {
         goldToken = GoldToken(payable(_goldTokenAddress));
         lotteryState = LotteryState.Closed;
     }
@@ -153,15 +153,5 @@ contract GoldTokenLottery is ConfirmedOwner, VRFV2PlusWrapperConsumerBase {
 
         // Reset participants for the next lottery
         delete participants;
-    }
-
-    /**
-     * @notice Allows the owner to withdraw any native tokens from the contract.
-     * @param amount The amount of native tokens to withdraw.
-     */
-    function withdrawNative(uint256 amount) external onlyOwner {
-        require(amount <= goldToken.collectedFees());
-        (bool success, ) = payable(owner()).call{value: amount}("");
-        require(success, "Withdraw failed");
     }
 }
