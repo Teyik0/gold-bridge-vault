@@ -1,19 +1,16 @@
 // SPDX-License-Identifier: MIT
 // Compatible with OpenZeppelin Contracts ^5.0.0
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.19;
 
 import {console} from "forge-std/Test.sol";
-import {GoldToken} from "./GoldToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IRouterClient} from "@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/IRouterClient.sol";
+import {Client} from "@chainlink/contracts-ccip/src/v0.8/ccip/libraries/Client.sol";
 
-import {IRouterClient} from "@chainlink/ccip/ccip/interfaces/IRouterClient.sol";
-import {OwnerIsCreator} from "@chainlink/ccip/shared/access/OwnerIsCreator.sol";
-import {Client} from "@chainlink/ccip/ccip/libraries/Client.sol";
-
-contract GoldTokenCCIP is GoldToken, OwnerIsCreator {
+contract GoldTokenCCIP {
     error NotEnoughBalance(uint256 currentBalance, uint256 neededAmount);
-    error InvalidReceiverAddress(string message);
+    error InvalidReceiverAddress();
 
     using SafeERC20 for IERC20;
 
@@ -29,18 +26,19 @@ contract GoldTokenCCIP is GoldToken, OwnerIsCreator {
 
     IRouterClient private s_router;
     uint64 immutable DESTINATION_CHAIN_SELECTORR;
+    address public goldToken;
 
     /**
      * @notice Constructor initializes the contract with the router address.
      * @param _router The address of the router contract.
      */
     constructor(
-        address _eth_usd_agg,
-        address _gold_usd_agg,
         address _router,
-        uint64 _destinationChainSelector
-    ) GoldToken(_eth_usd_agg, _gold_usd_agg) {
+        uint64 _destinationChainSelector,
+        address _goldToken
+    ) {
         s_router = IRouterClient(_router);
+        goldToken = _goldToken;
         DESTINATION_CHAIN_SELECTORR = _destinationChainSelector;
     }
 
@@ -58,18 +56,17 @@ contract GoldTokenCCIP is GoldToken, OwnerIsCreator {
         address _receiver,
         uint256 _amount
     ) external returns (bytes32 messageId) {
-        if (_receiver == address(0))
-            revert InvalidReceiverAddress("Receiver address cannot be 0");
-        if (_amount > IERC20(address(this)).balanceOf(msg.sender)) {
+        if (_receiver == address(0)) revert InvalidReceiverAddress();
+        if (_amount > IERC20(address(goldToken)).balanceOf(msg.sender)) {
             revert NotEnoughBalance(
-                IERC20(address(this)).balanceOf(msg.sender),
+                IERC20(address(goldToken)).balanceOf(msg.sender),
                 _amount
             );
         }
 
         Client.EVM2AnyMessage memory evm2AnyMessage = _buildCCIPMessage(
             _receiver,
-            address(this),
+            address(goldToken),
             _amount,
             address(0)
         );
@@ -79,12 +76,8 @@ contract GoldTokenCCIP is GoldToken, OwnerIsCreator {
             evm2AnyMessage
         );
 
-        IERC20(address(this)).safeTransferFrom(
-            msg.sender,
-            address(this),
-            _amount
-        );
-        IERC20(address(this)).approve(address(s_router), _amount);
+        IERC20(goldToken).safeTransferFrom(msg.sender, address(this), _amount);
+        IERC20(goldToken).approve(address(s_router), _amount);
 
         messageId = s_router.ccipSend{value: fees}(
             DESTINATION_CHAIN_SELECTORR,

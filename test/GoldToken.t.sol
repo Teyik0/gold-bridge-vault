@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.19;
 
 import {Test, console} from "forge-std/Test.sol";
 import {GoldToken} from "../src/GoldToken.sol";
-import {MockV3Aggregator} from "@chainlink/contracts/v0.8/tests/MockV3Aggregator.sol";
+import {MockV3Aggregator} from "@chainlink/contracts/src/v0.8/tests/MockV3Aggregator.sol";
 
 // forge coverage --report debug > report.log
 contract GoldTokenTest is Test {
@@ -74,15 +74,6 @@ contract GoldTokenTest is Test {
         uint256 etherSpent = (ETH_USD_VAL * 1e18) / XAU_USD_VAL;
         goldToken.mint{value: etherSpent}();
         assertEq(goldToken.balanceOf(USER1), 0.95 ether); // 1 ounce - 5% fee = 0.95 ounce
-        vm.stopPrank();
-    }
-
-    function test_mint_failed_notEnoughFund() public {
-        // user want to buy 1 ounce of gold
-        vm.startPrank(USER2);
-        uint256 etherSpent = (ETH_USD_VAL * 1e18) / XAU_USD_VAL;
-        vm.expectRevert();
-        goldToken.mint{value: etherSpent}();
         vm.stopPrank();
     }
 

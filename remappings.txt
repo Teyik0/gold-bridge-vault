@@ -1,5 +1,13 @@
+@chainlink/contracts-ccip/=lib/chainlink-local/lib/ccip/contracts/
+@chainlink/contracts/=lib/chainlink-local/lib/chainlink-brownie-contracts/contracts/
+@chainlink/local/src/=lib/chainlink-local/src/
+
 @openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
-@chainlink/contracts/=lib/foundry-chainlink-toolkit/lib/chainlink-brownie-contracts/contracts/src/
-@chainlink/ccip/=lib/chainlink-local/lib/ccip/contracts/src/v0.8/
-@chainlink/local/=lib/chainlink-local/src/
+
+ccip/=lib/chainlink-local/lib/ccip/
+chainlink-brownie-contracts/=lib/chainlink-local/lib/chainlink-brownie-contracts/contracts/src/v0.6/vendor/@arbitrum/nitro-contracts/src/
+chainlink-local/=lib/chainlink-local/src/
+foundry-chainlink-toolkit/=lib/foundry-chainlink-toolkit/
+
 forge-std/=lib/forge-std/src/
+openzeppelin-contracts/=lib/openzeppelin-contracts/
